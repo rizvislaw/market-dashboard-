@@ -16,10 +16,10 @@
     <h1 class="text-4xl font-bold mb-4 text-center text-blue-700">📈 Live Market Dashboard</h1>
 
     <div class="mb-6 bg-white p-6 card">
-      <h2 class="text-2xl mb-4 font-semibold">🔍 Search Stocks / Crypto / Metals</h2>
-      <input id="symbolInput" type="text" placeholder="e.g., AAPL, BTC/USD, XAU/USD" class="border p-2 w-1/2 rounded-md">
+      <h2 class="text-2xl mb-4 font-semibold">🔍 Search Stocks / Crypto</h2>
+      <input id="symbolInput" type="text" placeholder="e.g., AAPL, BTC, ETH" class="border p-2 w-1/2 rounded-md">
       <button onclick="loadData()" class="ml-2 bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">Load Data</button>
-      <p class="text-sm mt-2 text-gray-500">Example: BP.L, BTC/USD, ETH/USD, XAU/USD, XAG/USD</p>
+      <p class="text-sm mt-2 text-gray-500">Example: AAPL (Stock), BTC (Crypto)</p>
     </div>
 
     <div class="bg-white p-6 card mb-6">
@@ -35,71 +35,84 @@
 
       <div class="bg-white p-6 card">
         <h2 class="text-2xl font-semibold mb-4">🇵🇰 Pakistani Business News</h2>
-        <ul id="pkNews" class="space-y-2 text-sm text-gray-700"></ul>
+        <ul id="pkNews" class="space-y-2 text-sm text-gray-700">
+          <li><a href="https://www.dawn.com/business" target="_blank" class="text-blue-600 underline">Dawn Business News</a></li>
+          <li><a href="https://www.brecorder.com" target="_blank" class="text-blue-600 underline">Business Recorder</a></li>
+          <li><a href="https://tribune.com.pk/business" target="_blank" class="text-blue-600 underline">The Express Tribune - Business</a></li>
+        </ul>
       </div>
     </div>
   </div>
 
   <script>
     let chart;
-    const alphaVantageApiKey = 'F70MIVKZZVG7JM4H';  // Your Alpha Vantage API key
 
-    async function fetchChartData(symbol) {
+    // Fetch stock price from Alpha Vantage API
+    async function fetchStockPrice(symbol) {
+      const alphaVantageApiKey = 'F70MIVKZZVG7JM4H';  // Your Alpha Vantage API key
       const url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${symbol}&apikey=${alphaVantageApiKey}`;
-      
+
       try {
         const res = await fetch(url);
         const data = await res.json();
-        if (!data["Time Series (Daily)"]) return null;
-        
-        const labels = Object.keys(data["Time Series (Daily)"]).reverse().slice(0, 30);
-        const prices = labels.map(date => parseFloat(data["Time Series (Daily)"][date]["4. close"]));
 
-        return {
-          labels,
-          prices
-        };
+        if (data['Error Message'] || !data['Time Series (Daily)']) {
+          throw new Error('No data available for this symbol');
+        }
+
+        const labels = Object.keys(data['Time Series (Daily)']).reverse().slice(0, 30);
+        const prices = labels.map(date => parseFloat(data['Time Series (Daily)'][date]['4. close']));
+
+        return { labels, prices };
       } catch (err) {
-        console.error("Alpha Vantage error", err);
+        console.error('Error fetching stock price:', err);
+        alert("Unable to fetch stock data.");
         return null;
       }
     }
 
-    async function fetchStockNews(symbol) {
-      const apiKey = "998d62e180684a9580646f425d7f142e";
-      const url = `https://newsapi.org/v2/everything?q=${symbol}&sortBy=publishedAt&language=en&apiKey=${apiKey}`;
-      
+    // Fetch crypto price from CoinGecko API
+    async function fetchCryptoPrice(symbol) {
+      const url = `https://api.coingecko.com/api/v3/simple/price?ids=${symbol}&vs_currencies=usd`;
+
       try {
         const res = await fetch(url);
         const data = await res.json();
-        return data.articles || [];
+
+        if (!data[symbol]) {
+          throw new Error('No data available for this cryptocurrency');
+        }
+
+        return data[symbol].usd;
       } catch (err) {
-        console.error("NewsAPI error", err);
-        return [];
+        console.error('Error fetching crypto price:', err);
+        alert("Unable to fetch cryptocurrency data.");
+        return null;
       }
     }
 
-    async function fetchPakistaniNews() {
-      const gnewsApiKey = "39594d76ab6f80d25e5b0e5427f86722";
-      const url = `https://gnews.io/api/v4/search?q=business+pakistan&lang=en&country=pk&max=5&apikey=${gnewsApiKey}`;
-      
-      try {
-        const res = await fetch(url);
-        const data = await res.json();
-        return data.articles || [];
-      } catch (err) {
-        console.error("GNews error", err);
-        return [];
-      }
-    }
-
+    // Load data based on the symbol
     async function loadData() {
-      const symbol = document.getElementById("symbolInput").value || "BP.L";
+      const symbol = document.getElementById("symbolInput").value || 'AAPL';  // Default to AAPL (Apple)
       document.getElementById("chartTitle").textContent = `📊 Price Chart for ${symbol}`;
 
-      const chartData = await fetchChartData(symbol);
+      let chartData;
+      let price;
+
+      // Determine if the symbol is a stock or crypto
+      if (['bitcoin', 'ethereum', 'litecoin'].includes(symbol.toLowerCase())) {
+        price = await fetchCryptoPrice(symbol.toLowerCase());
+        if (price) {
+          // Display Crypto Price
+          chartData = { labels: ['Now'], prices: [price] };
+          document.getElementById("stockNews").innerHTML = `<li>Current Price: $${price}</li>`;
+        }
+      } else {
+        chartData = await fetchStockPrice(symbol);
+      }
+
       if (!chartData) {
-        alert("Unable to fetch chart data.");
+        alert("Unable to fetch data.");
         return;
       }
 
@@ -118,22 +131,18 @@
         }
       });
 
-      const newsItems = await fetchStockNews(symbol);
+      // Add some static stock news
+      const newsItems = [
+        { title: 'Stock Market Update: Global Indices on the Rise', url: 'https://www.bbc.com/news' },
+        { title: 'Apple Inc. to Release Quarterly Earnings', url: 'https://www.bbc.com/news' }
+      ];
+
       const newsList = document.getElementById("stockNews");
       newsList.innerHTML = '';
-      newsItems.slice(0, 5).forEach(item => {
+      newsItems.forEach(item => {
         const li = document.createElement('li');
         li.innerHTML = `<a href="${item.url}" target="_blank" class="text-blue-600 underline">${item.title}</a>`;
         newsList.appendChild(li);
-      });
-
-      const pkNewsItems = await fetchPakistaniNews();
-      const pkNewsList = document.getElementById("pkNews");
-      pkNewsList.innerHTML = '';
-      pkNewsItems.forEach(item => {
-        const li = document.createElement('li');
-        li.innerHTML = `<a href="${item.url}" target="_blank" class="text-blue-600 underline">${item.title}</a>`;
-        pkNewsList.appendChild(li);
       });
     }
 
