@@ -42,23 +42,25 @@
 
   <script>
     let chart;
+    const alphaVantageApiKey = 'F70MIVKZZVG7JM4H';  // Your Alpha Vantage API key
 
     async function fetchChartData(symbol) {
-      const apiKey = "889b65b7d0e8480da2f69cb725c39655";
-      const url = `https://api.twelvedata.com/time_series?symbol=${symbol}&interval=1day&outputsize=30&apikey=${apiKey}`;
-      const proxyUrl = "https://cors-anywhere.herokuapp.com/";  // Updated Proxy URL
-      const fullUrl = proxyUrl + encodeURIComponent(url);
+      const url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${symbol}&apikey=${alphaVantageApiKey}`;
       
       try {
-        const res = await fetch(fullUrl);
+        const res = await fetch(url);
         const data = await res.json();
-        if (!data.values) return null;
+        if (!data["Time Series (Daily)"]) return null;
+        
+        const labels = Object.keys(data["Time Series (Daily)"]).reverse().slice(0, 30);
+        const prices = labels.map(date => parseFloat(data["Time Series (Daily)"][date]["4. close"]));
+
         return {
-          labels: data.values.map(d => d.datetime).reverse(),
-          prices: data.values.map(d => parseFloat(d.close)).reverse()
+          labels,
+          prices
         };
       } catch (err) {
-        console.error("TwelveData error", err);
+        console.error("Alpha Vantage error", err);
         return null;
       }
     }
@@ -66,11 +68,9 @@
     async function fetchStockNews(symbol) {
       const apiKey = "998d62e180684a9580646f425d7f142e";
       const url = `https://newsapi.org/v2/everything?q=${symbol}&sortBy=publishedAt&language=en&apiKey=${apiKey}`;
-      const proxyUrl = "https://cors-anywhere.herokuapp.com/";
-      const fullUrl = proxyUrl + encodeURIComponent(url);
       
       try {
-        const res = await fetch(fullUrl);
+        const res = await fetch(url);
         const data = await res.json();
         return data.articles || [];
       } catch (err) {
@@ -82,11 +82,9 @@
     async function fetchPakistaniNews() {
       const gnewsApiKey = "39594d76ab6f80d25e5b0e5427f86722";
       const url = `https://gnews.io/api/v4/search?q=business+pakistan&lang=en&country=pk&max=5&apikey=${gnewsApiKey}`;
-      const proxyUrl = "https://cors-anywhere.herokuapp.com/";
-      const fullUrl = proxyUrl + encodeURIComponent(url);
       
       try {
-        const res = await fetch(fullUrl);
+        const res = await fetch(url);
         const data = await res.json();
         return data.articles || [];
       } catch (err) {
@@ -143,4 +141,3 @@
   </script>
 </body>
 </html>
-
