@@ -2,9 +2,9 @@
 <html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Market Dashboard - Stocks & Metals</title>
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Market Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet"/>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body {
@@ -13,7 +13,6 @@
     .card {
       border-radius: 1rem;
       box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
-      transition: background 0.3s ease;
     }
     [data-theme="dark"] {
       background-color: #1f2937;
@@ -21,18 +20,20 @@
     }
     [data-theme="dark"] .card {
       background-color: #374151;
-      color: #f3f4f6;
     }
   </style>
 </head>
 <body class="bg-gray-100 dark:bg-gray-900 p-6">
   <div class="max-w-6xl mx-auto">
+    <!-- Header -->
     <div class="flex justify-between items-center mb-6">
-      <h1 class="text-4xl font-bold text-center text-purple-700 dark:text-purple-300 w-full">📈 Market Dashboard</h1>
-      <button onclick="toggleTheme()" class="bg-gray-800 text-white px-4 py-2 rounded-md hover:bg-gray-600 ml-auto">Toggle Dark Mode</button>
+      <h1 class="text-4xl font-bold text-purple-700 dark:text-purple-300">📈 Market Dashboard</h1>
+      <button onclick="toggleTheme()" aria-label="Toggle Dark Mode">
+        🌙
+      </button>
     </div>
 
-    <!-- Stock Search -->
+    <!-- Search -->
     <div class="bg-white dark:bg-gray-800 p-6 card mb-6">
       <h2 class="text-2xl font-semibold mb-4">🔍 Search Stock Symbol</h2>
       <input id="symbolInput" type="text" placeholder="e.g., AAPL, BP.L" class="border p-2 w-1/2 rounded-md bg-gray-100 dark:bg-gray-700 dark:text-white">
@@ -46,7 +47,7 @@
       <canvas id="stockChart" height="100"></canvas>
     </div>
 
-    <!-- Metal Prices & Charts -->
+    <!-- Metals Section -->
     <div class="bg-white dark:bg-gray-800 p-6 card mb-6">
       <h2 class="text-2xl font-semibold mb-4">💰 Metals Market</h2>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -65,7 +66,19 @@
       </div>
     </div>
 
-    <!-- Business News -->
+    <!-- PSX Highlights -->
+    <div class="bg-white dark:bg-gray-800 p-6 card mb-6">
+      <h2 class="text-2xl font-semibold mb-4">📢 Pakistan Stock Exchange Highlights</h2>
+      <ul class="list-disc pl-6 space-y-2 text-sm text-gray-800 dark:text-gray-200">
+        <li>KSE-100 Index closed at 72,500 points, up 1.2% today.</li>
+        <li>Top Gainer: ENGRO (+5.1%) | Top Loser: HUBC (-2.3%).</li>
+        <li>Market Volume: 250 million shares traded.</li>
+        <li>Major Sectors: Banking, Cement, and Fertilizers saw strong activity.</li>
+        <li>Investors optimistic amid stable interest rates and declining inflation.</li>
+      </ul>
+    </div>
+
+    <!-- News -->
     <div class="bg-white dark:bg-gray-800 p-6 card mb-6">
       <h2 class="text-2xl font-semibold mb-4">📰 Latest Business News (Pakistan)</h2>
       <ul id="newsList" class="space-y-4 text-sm text-blue-700 dark:text-blue-300"></ul>
@@ -87,6 +100,13 @@
   <script>
     const apiKey = "889b65b7d0e8480da2f69cb725c39655";
     let chart, goldChart, silverChart;
+
+    function toggleTheme() {
+      const html = document.documentElement;
+      const newTheme = html.getAttribute("data-theme") === "dark" ? "light" : "dark";
+      html.setAttribute("data-theme", newTheme);
+      localStorage.setItem("theme", newTheme);
+    }
 
     async function loadChart() {
       const symbol = document.getElementById("symbolInput").value || "BP.L";
@@ -186,4 +206,41 @@
           });
 
           if (metal.chartId === "goldChart") goldChart = metalChart;
-          if (metal
+          if (metal.chartId === "silverChart") silverChart = metalChart;
+
+        } catch (error) {
+          console.error(`Error loading ${metal.label} data:`, error);
+          document.getElementById(metal.priceId).textContent = `${metal.label}: Unable to fetch data.`;
+        }
+      }
+    }
+
+    async function loadBusinessNews() {
+      try {
+        const url = `https://gnews.io/api/v4/search?q=business+pakistan&lang=en&token=39594d76ab6f80d25e5b0e5427f86722`;
+        const response = await fetch(url);
+        const data = await response.json();
+        const list = document.getElementById("newsList");
+        list.innerHTML = "";
+
+        data.articles.slice(0, 6).forEach(article => {
+          const li = document.createElement("li");
+          li.innerHTML = `<a href="${article.url}" target="_blank" class="underline hover:text-purple-500">${article.title}</a> - <span class="text-xs text-gray-500 dark:text-gray-300">${article.source.name}</span>`;
+          list.appendChild(li);
+        });
+      } catch (error) {
+        console.error("News Error:", error);
+        document.getElementById("newsList").innerHTML = "<li>Unable to load news at the moment.</li>";
+      }
+    }
+
+    window.onload = () => {
+      const savedTheme = localStorage.getItem("theme") || "light";
+      document.documentElement.setAttribute("data-theme", savedTheme);
+      loadChart();
+      loadMetalPricesAndCharts();
+      loadBusinessNews();
+    };
+  </script>
+</body>
+</html>
