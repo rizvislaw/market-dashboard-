@@ -48,7 +48,7 @@
       const apiKey = "889b65b7d0e8480da2f69cb725c39655";
       const url = `https://api.twelvedata.com/time_series?symbol=${symbol}&interval=1day&outputsize=30&apikey=${apiKey}`;
       try {
-        const res = await fetch(url);
+        const res = await fetch("https://corsproxy.io/?" + encodeURIComponent(url));
         const data = await res.json();
         if (!data.values) return null;
         return {
@@ -65,7 +65,7 @@
       const apiKey = "998d62e180684a9580646f425d7f142e";
       const url = `https://newsapi.org/v2/everything?q=${symbol}&sortBy=publishedAt&language=en&apiKey=${apiKey}`;
       try {
-        const res = await fetch(url);
+        const res = await fetch("https://corsproxy.io/?" + encodeURIComponent(url));
         const data = await res.json();
         return data.articles || [];
       } catch (err) {
@@ -78,7 +78,7 @@
       const gnewsApiKey = "39594d76ab6f80d25e5b0e5427f86722";
       const url = `https://gnews.io/api/v4/search?q=business+pakistan&lang=en&country=pk&max=5&apikey=${gnewsApiKey}`;
       try {
-        const res = await fetch(url);
+        const res = await fetch("https://corsproxy.io/?" + encodeURIComponent(url));
         const data = await res.json();
         return data.articles || [];
       } catch (err) {
