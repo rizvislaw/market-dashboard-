@@ -1,0 +1,137 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Live Market Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { font-family: 'Segoe UI', sans-serif; }
+    .card { border-radius: 1rem; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12); }
+  </style>
+</head>
+<body class="bg-gray-100 p-6">
+  <div class="max-w-7xl mx-auto">
+    <h1 class="text-4xl font-bold mb-4 text-center text-blue-700">📈 Live Market Dashboard</h1>
+
+    <div class="mb-6 bg-white p-6 card">
+      <h2 class="text-2xl mb-4 font-semibold">🔍 Search Stocks / Crypto / Metals</h2>
+      <input id="symbolInput" type="text" placeholder="e.g., AAPL, BTC/USD, XAU/USD" class="border p-2 w-1/2 rounded-md">
+      <button onclick="loadData()" class="ml-2 bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">Load Data</button>
+      <p class="text-sm mt-2 text-gray-500">Example: BP.L, BTC/USD, ETH/USD, XAU/USD, XAG/USD</p>
+    </div>
+
+    <div class="bg-white p-6 card mb-6">
+      <h2 class="text-2xl font-semibold mb-4" id="chartTitle">📊 Price Chart</h2>
+      <canvas id="priceChart" height="100"></canvas>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div class="bg-white p-6 card">
+        <h2 class="text-2xl font-semibold mb-4">📰 Related News</h2>
+        <ul id="stockNews" class="space-y-2 text-sm text-gray-700"></ul>
+      </div>
+
+      <div class="bg-white p-6 card">
+        <h2 class="text-2xl font-semibold mb-4">🇵🇰 Pakistani Business News</h2>
+        <ul id="pkNews" class="space-y-2 text-sm text-gray-700"></ul>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let chart;
+
+    async function fetchChartData(symbol) {
+      const apiKey = "889b65b7d0e8480da2f69cb725c39655";
+      const url = `https://api.twelvedata.com/time_series?symbol=${symbol}&interval=1day&outputsize=30&apikey=${apiKey}`;
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+        if (!data.values) return null;
+        return {
+          labels: data.values.map(d => d.datetime).reverse(),
+          prices: data.values.map(d => parseFloat(d.close)).reverse()
+        };
+      } catch (err) {
+        console.error("TwelveData error", err);
+        return null;
+      }
+    }
+
+    async function fetchStockNews(symbol) {
+      const apiKey = "998d62e180684a9580646f425d7f142e";
+      const url = `https://newsapi.org/v2/everything?q=${symbol}&sortBy=publishedAt&language=en&apiKey=${apiKey}`;
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+        return data.articles || [];
+      } catch (err) {
+        console.error("NewsAPI error", err);
+        return [];
+      }
+    }
+
+    async function fetchPakistaniNews() {
+      const gnewsApiKey = "39594d76ab6f80d25e5b0e5427f86722";
+      const url = `https://gnews.io/api/v4/search?q=business+pakistan&lang=en&country=pk&max=5&apikey=${gnewsApiKey}`;
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+        return data.articles || [];
+      } catch (err) {
+        console.error("GNews error", err);
+        return [];
+      }
+    }
+
+    async function loadData() {
+      const symbol = document.getElementById("symbolInput").value || "BP.L";
+      document.getElementById("chartTitle").textContent = `📊 Price Chart for ${symbol}`;
+
+      const chartData = await fetchChartData(symbol);
+      if (!chartData) {
+        alert("Unable to fetch chart data.");
+        return;
+      }
+
+      if (chart) chart.destroy();
+      const ctx = document.getElementById("priceChart").getContext("2d");
+      chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: chartData.labels,
+          datasets: [{
+            label: `${symbol} Price`,
+            data: chartData.prices,
+            borderColor: '#3b82f6',
+            fill: false,
+          }]
+        }
+      });
+
+      const newsItems = await fetchStockNews(symbol);
+      const newsList = document.getElementById("stockNews");
+      newsList.innerHTML = '';
+      newsItems.slice(0, 5).forEach(item => {
+        const li = document.createElement('li');
+        li.innerHTML = `<a href="${item.url}" target="_blank" class="text-blue-600 underline">${item.title}</a>`;
+        newsList.appendChild(li);
+      });
+
+      const pkNewsItems = await fetchPakistaniNews();
+      const pkNewsList = document.getElementById("pkNews");
+      pkNewsList.innerHTML = '';
+      pkNewsItems.forEach(item => {
+        const li = document.createElement('li');
+        li.innerHTML = `<a href="${item.url}" target="_blank" class="text-blue-600 underline">${item.title}</a>`;
+        pkNewsList.appendChild(li);
+      });
+    }
+
+    window.onload = () => loadData();
+  </script>
+</body>
+</html>
